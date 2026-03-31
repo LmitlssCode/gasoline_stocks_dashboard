@@ -46,10 +46,15 @@ All data is sourced from the [EIA API v2](https://www.eia.gov/opendata/):
 
 ## Usage
 
-Open `gasoline_dashboard_Finalv1.html` in a web browser. The dashboard will automatically fetch the latest data from the EIA API and render all charts and tables. No build step or server is required.
+1. Open `gasoline_dashboard_Finalv1.html` in a web browser
+2. Enter your **EIA API key** in the input field at the top of the dashboard
+3. Click **"Pull Data"** to fetch and display all data
+
+No build step or server is required.
 
 ### Requirements
 
+- **EIA API Key** — Register for a free API key at [https://www.eia.gov/opendata/register.php](https://www.eia.gov/opendata/register.php)
 - A modern web browser (Chrome, Firefox, Edge, Safari)
 - Internet connection (for live EIA API data)
 
