@@ -28,6 +28,7 @@
 </head>
 <body>
 <div class="header"><div class="header-top"><div><div class="header-badge">EIA Weekly Petroleum Status Report</div><h1>Gasoline Fundamentals</h1><div class="header-meta">RBOB · CBOB · Total Gasoline — By PADD Region<span id="lastUpdate"></span></div></div><div style="display:flex;gap:6px;align-items:center"><button class="btn btn-debug" id="debugToggle" onclick="toggleDebug()">🔍 Debug</button><button class="btn btn-accent" onclick="refreshAll()">↻ Refresh All</button></div></div></div>
+<div class="api-bar" style="margin:12px 28px 0;padding:10px 16px;background:var(--sf);border:1px solid var(--bd);border-radius:8px;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><label style="font-size:11px;font-weight:700;color:var(--tx2);text-transform:uppercase;letter-spacing:1px;font-family:var(--mo);white-space:nowrap">EIA API Key</label><input type="text" id="apiKeyInput" placeholder="Enter your EIA API key..." style="flex:1;min-width:200px;background:var(--sf2);border:1px solid var(--bd);border-radius:6px;padding:7px 12px;font-size:12px;font-family:var(--mo);color:var(--tx);outline:none" onfocus="this.style.borderColor='rgba(0,229,255,0.4)'" onblur="this.style.borderColor='rgba(255,255,255,0.06)'"><button class="btn btn-accent" style="padding:7px 18px;font-size:12px;font-weight:700" onclick="pullData()">Pull Data</button><span id="apiStatus" style="font-size:10px;font-family:var(--mo);color:var(--tx3)"></span></div>
 <div class="status-bar"><span><span class="status-dot load" id="statusDot"></span> <span id="statusText">Connecting...</span></span><span id="statusCounts" style="margin-left:auto"></span></div>
 <div class="debug-panel" id="debugPanel"><div class="debug-header"><h3>🔍 DEBUG</h3><span style="font-family:var(--mo);font-size:10px;color:var(--tx3)" id="debugTimestamp"></span></div><div class="debug-body" id="debugBody"></div></div>
 <div class="content">
@@ -45,7 +46,7 @@
   </div>
 </div>
 <script>
-const AK="pMqnFqpdhwFV0XzZGK0G5ECuAqx1N4v68AxsRBkI";
+let AK="";
 const PD=[{id:"NUS",label:"U.S. Total",short:"U.S."},{id:"R10",label:"PADD 1 (East Coast)",short:"PADD 1"},{id:"R20",label:"PADD 2 (Midwest)",short:"PADD 2"},{id:"R30",label:"PADD 3 (Gulf Coast)",short:"PADD 3"},{id:"R40",label:"PADD 4 (Rockies)",short:"PADD 4"},{id:"R50",label:"PADD 5 (West Coast)",short:"PADD 5"}];
 const PI=PD.map(p=>p.id);
 const PM={
@@ -440,8 +441,9 @@ function renderUtilChart(){
 }
 
 /* ══════ REFRESH/INIT ══════ */
-function refreshAll(){DATA={};fetchedCats={};totalCalls=0;okCalls=0;failCalls=0;debugLog=[];Object.values(charts).forEach(c=>{if(c)c.destroy()});charts={};updateStatus();switchTab(activeTab)}
-async function init(){buildTabs();document.getElementById("sectionContainer").innerHTML='<div class="chart-loading"><div class="spinner"></div> Loading all data from EIA...</div>';await fetchCategory("stocks");await fetchCategory("trade");await fetchCategory("production");await fetchCategory("refinery");await fetchCategory("demand");updateMetrics();computeSentiment();renderSection();document.getElementById("lastUpdate").textContent="  Updated "+new Date().toLocaleTimeString()}
+function refreshAll(){if(!AK){document.getElementById("apiStatus").textContent="Please enter an API key first";document.getElementById("apiStatus").style.color="var(--rd)";return}DATA={};fetchedCats={};totalCalls=0;okCalls=0;failCalls=0;debugLog=[];Object.values(charts).forEach(c=>{if(c)c.destroy()});charts={};updateStatus();switchTab(activeTab)}
+function pullData(){const key=document.getElementById("apiKeyInput").value.trim();if(!key){document.getElementById("apiStatus").textContent="Please enter a valid API key";document.getElementById("apiStatus").style.color="var(--rd)";return}AK=key;document.getElementById("apiStatus").textContent="Key set — fetching data...";document.getElementById("apiStatus").style.color="var(--gn)";DATA={};fetchedCats={};totalCalls=0;okCalls=0;failCalls=0;debugLog=[];Object.values(charts).forEach(c=>{if(c)c.destroy()});charts={};updateStatus();init()}
+async function init(){buildTabs();if(!AK){document.getElementById("sectionContainer").innerHTML='<div class="no-data" style="padding:60px 0;font-size:14px;color:var(--tx2)">Enter your EIA API key above and click <strong style="color:var(--cy)">Pull Data</strong> to load the dashboard.</div>';return}document.getElementById("sectionContainer").innerHTML='<div class="chart-loading"><div class="spinner"></div> Loading all data from EIA...</div>';await fetchCategory("stocks");await fetchCategory("trade");await fetchCategory("production");await fetchCategory("refinery");await fetchCategory("demand");updateMetrics();computeSentiment();renderSection();document.getElementById("lastUpdate").textContent="  Updated "+new Date().toLocaleTimeString();document.getElementById("apiStatus").textContent="Data loaded successfully";document.getElementById("apiStatus").style.color="var(--gn)"}
 init();
 </script>
 </body>
