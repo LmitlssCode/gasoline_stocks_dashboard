@@ -90,11 +90,14 @@ function storeAll(cat,bk){Object.keys(bk).forEach(k=>{const[pk,area]=k.split("|"
 function areaBucket(raw){const bk={};raw.forEach(d=>{const area=d.duoarea;if(!area)return;if(!bk[area])bk[area]=[];const v=pv(d.value);if(v!==null)bk[area].push({period:d.period,value:v})});Object.keys(bk).forEach(k=>{bk[k].sort((a,b)=>a.period.localeCompare(b.period));bk[k]=dedup(bk[k])});return bk}
 
 /* ══════ FETCHERS ══════ */
+const STOCKS_MIN_DATE="2018-01-01";
 async function fetchStocks(){
   const url="https://api.eia.gov/v2/petroleum/sum/sndw/data/?api_key="+AK+"&frequency=weekly&data[0]=value&facets[series][]=WO6ST_NUS_1&facets[series][]=WO6ST_R10_1&facets[series][]=WO6ST_R20_1&facets[series][]=WO6ST_R30_1&facets[series][]=WO6ST_R40_1&facets[series][]=WO6ST_R50_1&facets[series][]=W_EPOBGRR_SAE_NUS_MBBL&facets[series][]=W_EPOBGRR_SAE_R10_MBBL&facets[series][]=W_EPOBGRR_SAE_R20_MBBL&facets[series][]=W_EPOBGRR_SAE_R30_MBBL&facets[series][]=W_EPOBGRR_SAE_R40_MBBL&facets[series][]=W_EPOBGRR_SAE_R50_MBBL&facets[series][]=WGTSTP11&facets[series][]=WGTSTP21&facets[series][]=WGTSTP31&facets[series][]=WGTSTP41&facets[series][]=WGTSTP51&facets[series][]=WGTSTUS1&facets[product][]=EPOBGRR&facets[product][]=EPOBGCC&facets[product][]=EPM0&facets[process][]=SAE&facets[duoarea][]=NUS&facets[duoarea][]=R10&facets[duoarea][]=R20&facets[duoarea][]=R30&facets[duoarea][]=R40&facets[duoarea][]=R50&sort[0][column]=period&sort[0][direction]=desc&offset=0&length=5000";
   const r=await apiFetch(url);if(!r.ok){logDebug("stocks","ALL","","fail",0,null,null,r.error);return}
   logDebug("stocks","BATCH","","ok",r.data.length,null,null,"raw");
-  storeAll("stocks",bucket(r.data,{"EPOBGRR":"RBOB","EPOBGCC":"CBOB","EPM0":"TGAS"},null));
+  // Hard floor at 2018 for ALL stocks data (US, PADDs 1-5)
+  const filtered=r.data.filter(d=>d.period&&d.period>=STOCKS_MIN_DATE);
+  storeAll("stocks",bucket(filtered,{"EPOBGRR":"RBOB","EPOBGCC":"CBOB","EPM0":"TGAS"},null));
 }
 
 async function fetchStocksPadd1Sub(){
@@ -106,6 +109,8 @@ async function fetchStocksPadd1Sub(){
   r.data.forEach(d=>{
     const area=seriesMap[d.series];
     if(!area)return;
+    // Hard floor at 2018 for sub-PADD stocks too
+    if(!d.period||d.period<STOCKS_MIN_DATE)return;
     const v=pv(d.value);if(v===null)return;
     const k="TGAS|"+area;
     if(!bk[k])bk[k]=[];
