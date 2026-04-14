@@ -7,7 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#080b10;--sf:#0e1219;--sf2:#141b24;--bd:rgba(255,255,255,0.06);--bd2:rgba(255,255,255,0.1);--tx:#c5cdd8;--tx2:#7b8a9d;--tx3:#3f4d5e;--cy:#00e5ff;--cy2:rgba(0,229,255,0.12);--am:#ffb300;--vi:#b388ff;--gn:#00e676;--rd:#ff5252;--rs:#f472b6;--tl:#2dd4bf;--mo:'JetBrains Mono',monospace;--sa:'Outfit',sans-serif}
+:root{--bg:#080b10;--sf:#0e1219;--sf2:#141b24;--bd:rgba(255,255,255,0.06);--bd2:rgba(255,255,255,0.1);--tx:#c5cdd8;--tx2:#9aa8bc;--tx3:#8a99ae;--cy:#00e5ff;--cy2:rgba(0,229,255,0.12);--am:#ffb300;--vi:#b388ff;--gn:#00e676;--rd:#ff5252;--rs:#f472b6;--tl:#2dd4bf;--mo:'JetBrains Mono',monospace;--sa:'Outfit',sans-serif}
 *{margin:0;padding:0;box-sizing:border-box}body{background:var(--bg);color:var(--tx);font-family:var(--sa);min-height:100vh}
 ::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:3px}
 .header{background:linear-gradient(180deg,rgba(0,229,255,0.04) 0%,var(--bg) 100%);border-bottom:1px solid var(--bd);padding:20px 28px 16px}.header-top{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px}.header-badge{font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--cy);font-family:var(--mo)}.header h1{font-size:28px;font-weight:800;color:#eaf0f6;margin:4px 0 0;letter-spacing:-.5px}.header-meta{font-size:12px;color:var(--tx2);margin-top:5px}.header-meta span{color:var(--tx3);margin-left:10px}
@@ -255,10 +255,10 @@ function calc5YrAvg(series){
 }
 
 /* ══════ DATE ══════ */
-function getDateCutoff(){if(dateRange==="ALL")return null;if(dateRange==="CUSTOM")return customStart;const n=new Date();const m={"1M":1,"3M":3,"6M":6,"1Y":12,"2Y":24,"5Y":60,"10Y":120};n.setMonth(n.getMonth()-(m[dateRange]||0));return n.toISOString().slice(0,10)}
+function getDateCutoff(){if(dateRange==="ALL")return null;if(dateRange==="CUSTOM")return customStart;const n=new Date();const m={"1M":1,"3M":3,"6M":6,"1Y":12,"2Y":24,"5Y":60};n.setMonth(n.getMonth()-(m[dateRange]||0));return n.toISOString().slice(0,10)}
 function getDateEnd(){return dateRange==="CUSTOM"&&customEnd?customEnd:null}
 function filterByDate(arr){if(!arr||!arr.length)return arr;let s=getDateCutoff(),e=getDateEnd();if(activeTab==="stocks"&&(!s||s<"2018-01-01"))s="2018-01-01";return arr.filter(d=>{if(s&&d.period<s)return false;if(e&&d.period>e)return false;return true})}
-function setRange(r){dateRange=r;document.querySelectorAll('.range-btn').forEach(b=>b.classList.toggle('active',b.dataset.range===r));renderSection()}
+function setRange(r){dateRange=r;customStart=null;customEnd=null;const ds=document.getElementById('dateStart');if(ds)ds.value="";const de=document.getElementById('dateEnd');if(de)de.value="";document.querySelectorAll('.range-btn').forEach(b=>b.classList.toggle('active',b.dataset.range===r));renderSection()}
 function applyCustomDates(){const s=document.getElementById('dateStart')?.value,e=document.getElementById('dateEnd')?.value;if(s){customStart=s;customEnd=e||null;dateRange="CUSTOM";document.querySelectorAll('.range-btn').forEach(b=>b.classList.toggle('active',b.dataset.range==="CUSTOM"));renderSection()}}
 
 /* ══════ DEBUG ══════ */
@@ -354,7 +354,7 @@ function renderSection(){
   if(showPadds){h+='<div class="padd-bar">';ap.forEach(p=>{h+='<button class="padd-btn'+(p.id===activePadd?' active':'')+'" onclick="selectPadd(\''+p.id+'\')">'+p.short+'</button>'});h+='</div>'}
   if(inPadd1Area){h+='<div class="padd-bar" style="margin-top:-6px"><span style="font-size:10px;color:var(--tx3);font-family:var(--mo);text-transform:uppercase;letter-spacing:1px;padding:4px 6px 4px 0;align-self:center">PADD 1 Sub-Regions:</span>';SUB1.forEach(p=>{h+='<button class="padd-btn'+(p.id===activePadd?' active':'')+'" onclick="selectPadd(\''+p.id+'\')">'+p.short+'</button>'});h+='</div>'}
   h+='<div class="date-controls"><span class="date-label">Range:</span>';
-  ["1M","3M","6M","1Y","2Y","5Y","10Y","ALL"].forEach(r=>{h+='<button class="range-btn'+(dateRange===r?' active':'')+'" data-range="'+r+'" onclick="setRange(\''+r+'\')">'+r+'</button>'});
+  ["1M","3M","6M","1Y","2Y","5Y","ALL"].forEach(r=>{h+='<button class="range-btn'+(dateRange===r?' active':'')+'" data-range="'+r+'" onclick="setRange(\''+r+'\')">'+r+'</button>'});
   h+='<span class="date-sep">|</span><span class="date-label">Custom:</span><input type="date" class="date-input" id="dateStart" value="'+(customStart||"")+'" onchange="applyCustomDates()"><span class="date-sep">→</span><input type="date" class="date-input" id="dateEnd" value="'+(customEnd||"")+'" onchange="applyCustomDates()">';
   if(isStocks){h+='<span class="date-sep">|</span><span class="date-label">Chart Type:</span><select class="view-select" style="padding:3px 8px;font-size:11px" onchange="setStocksChartType(this.value)"><option value="historical"'+(stocksChartType==="historical"?' selected':'')+'>Historical</option><option value="yoy"'+(stocksChartType==="yoy"?' selected':'')+'>YoY</option></select>'}
   h+='</div>';
@@ -399,7 +399,7 @@ function renderSection(){
 function selectPadd(pid){activePadd=pid;renderSection()}
 
 /* ══════ CHARTS ══════ */
-function chartOpts(isPct){return{responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},plugins:{legend:{labels:{color:"#7b8a9d",font:{family:"Outfit",size:11}}},tooltip:{backgroundColor:"#141b24",borderColor:"rgba(255,255,255,0.1)",borderWidth:1,titleFont:{family:"JetBrains Mono",size:11},bodyFont:{family:"JetBrains Mono",size:11},titleColor:"#c5cdd8",bodyColor:"#c5cdd8",callbacks:{title:ctx=>{const d=new Date(ctx[0].label+"T00:00:00");return d.toLocaleDateString("en-US",{year:"numeric",month:"short",day:"numeric"})},label:ctx=>ctx.dataset.label+": "+fF(ctx.parsed.y)+(isPct?"%":"")}}},scales:{x:{grid:{color:"rgba(255,255,255,0.03)"},ticks:{color:"#3f4d5e",font:{family:"JetBrains Mono",size:10},maxTicksLimit:12,callback:function(val){const l=this.getLabelForValue(val);const d=new Date(l+"T00:00:00");return d.toLocaleDateString("en-US",{month:"short",year:"2-digit"})}}},y:{grid:{color:"rgba(255,255,255,0.03)"},ticks:{color:"#3f4d5e",font:{family:"JetBrains Mono",size:10},callback:v=>fS(v)+(isPct?"%":"")}}}}}
+function chartOpts(isPct){return{responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},plugins:{legend:{labels:{color:"#bac6d6",font:{family:"Outfit",size:11}}},tooltip:{backgroundColor:"#141b24",borderColor:"rgba(255,255,255,0.1)",borderWidth:1,titleFont:{family:"JetBrains Mono",size:11},bodyFont:{family:"JetBrains Mono",size:11},titleColor:"#eaf0f6",bodyColor:"#eaf0f6",callbacks:{title:ctx=>{const d=new Date(ctx[0].label+"T00:00:00");return d.toLocaleDateString("en-US",{year:"numeric",month:"short",day:"numeric"})},label:ctx=>ctx.dataset.label+": "+fF(ctx.parsed.y)+(isPct?"%":"")}}},scales:{x:{grid:{color:"rgba(255,255,255,0.03)"},ticks:{color:"#bac6d6",font:{family:"JetBrains Mono",size:10},maxTicksLimit:12,callback:function(val){const l=this.getLabelForValue(val);const d=new Date(l+"T00:00:00");return d.toLocaleDateString("en-US",{month:"short",year:"2-digit"})}}},y:{grid:{color:"rgba(255,255,255,0.03)"},ticks:{color:"#bac6d6",font:{family:"JetBrains Mono",size:10},callback:v=>fS(v)+(isPct?"%":"")}}}}}
 function renderMainChart(){const canvas=document.getElementById("chartMain");if(!canvas)return;if(charts.main){charts.main.destroy();charts.main=null}const products=getProducts();const pSet=new Set(),sMap={};products.forEach(pk=>{const raw=DATA[activeTab+"_"+pk+"_"+activePadd]||[];const data=filterByDate(raw);const map={};data.forEach(d=>{pSet.add(d.period);map[d.period]=d.value});sMap[pk]=map});const labels=[...pSet].sort();if(!labels.length){canvas.parentElement.innerHTML='<div class="no-data">No data for this selection.</div>';return}const ds=[];products.forEach(pk=>{const m=PM[pk];if(!m)return;const map=sMap[pk]||{};if(!labels.some(p=>map[p]!=null))return;ds.push({label:m.label,data:labels.map(p=>map[p]!=null?map[p]:null),borderColor:m.color,backgroundColor:m.color+"18",fill:true,tension:.3,pointRadius:0,pointHitRadius:8,borderWidth:2,spanGaps:true})});if(!ds.length){canvas.parentElement.innerHTML='<div class="no-data">No data for this selection.</div>';return}charts.main=new Chart(canvas,{type:"line",data:{labels,datasets:ds},options:chartOpts(false)})}
 function renderYoYChart(){
   const canvas=document.getElementById("chartYoY");if(!canvas)return;
@@ -442,7 +442,7 @@ function renderYoYChart(){
     };
   });
   const baseOpts=chartOpts(false);
-  charts.yoy=new Chart(canvas,{type:"line",data:{labels,datasets:ds},options:{...baseOpts,plugins:{...baseOpts.plugins,legend:{labels:{color:"#7b8a9d",font:{family:"Outfit",size:10},boxWidth:10,boxHeight:2,padding:6}},tooltip:{...baseOpts.plugins.tooltip,callbacks:{title:ctx=>ctx[0].label,label:ctx=>ctx.dataset.label+": "+fF(ctx.parsed.y)}}},scales:{x:{...baseOpts.scales.x,ticks:{color:"#3f4d5e",font:{family:"JetBrains Mono",size:10},maxTicksLimit:13}},y:baseOpts.scales.y}}});
+  charts.yoy=new Chart(canvas,{type:"line",data:{labels,datasets:ds},options:{...baseOpts,plugins:{...baseOpts.plugins,legend:{labels:{color:"#bac6d6",font:{family:"Outfit",size:10},boxWidth:10,boxHeight:2,padding:6}},tooltip:{...baseOpts.plugins.tooltip,callbacks:{title:ctx=>ctx[0].label,label:ctx=>ctx.dataset.label+": "+fF(ctx.parsed.y)}}},scales:{x:{...baseOpts.scales.x,ticks:{color:"#bac6d6",font:{family:"JetBrains Mono",size:10},maxTicksLimit:13}},y:baseOpts.scales.y}}});
 }
 function renderUtilChart(){
   requestAnimationFrame(()=>{
@@ -487,8 +487,8 @@ function renderUtilChart(){
           // Draw average line as annotation
         },
         scales:{
-          x:{grid:{color:"rgba(255,255,255,0.03)"},ticks:{color:"#3f4d5e",font:{family:"JetBrains Mono",size:10},maxTicksLimit:12,callback:function(val){const l=this.getLabelForValue(val);const d=new Date(l+"T00:00:00");return d.toLocaleDateString("en-US",{month:"short",year:"2-digit"})}}},
-          y:{grid:{color:"rgba(255,255,255,0.03)"},min:0,max:100,ticks:{color:"#3f4d5e",font:{family:"JetBrains Mono",size:10},stepSize:10,callback:v=>v+"%"}}
+          x:{grid:{color:"rgba(255,255,255,0.03)"},ticks:{color:"#bac6d6",font:{family:"JetBrains Mono",size:10},maxTicksLimit:12,callback:function(val){const l=this.getLabelForValue(val);const d=new Date(l+"T00:00:00");return d.toLocaleDateString("en-US",{month:"short",year:"2-digit"})}}},
+          y:{grid:{color:"rgba(255,255,255,0.03)"},min:0,max:100,ticks:{color:"#bac6d6",font:{family:"JetBrains Mono",size:10},stepSize:10,callback:v=>v+"%"}}
         }
       },
       plugins:[{
