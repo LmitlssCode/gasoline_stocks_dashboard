@@ -403,10 +403,11 @@ function renderYoYChart(){
   const pk=isSub1(activePadd)?"TGAS":"TGAS";
   const raw=DATA["stocks_"+pk+"_"+activePadd]||[];
   if(!raw.length){canvas.parentElement.innerHTML='<div class="no-data">No YoY data for this selection.</div>';return}
-  // Group by year; use ISO week as x-axis key
+  // Group by year; use ISO week as x-axis key. Floor at 2018.
   const years={};
   raw.forEach(d=>{
     const yr=parseInt(d.period.slice(0,4));
+    if(yr<2018)return;
     const wk=getISOWeek(d.period);
     if(wk<1||wk>53)return;
     if(!years[yr])years[yr]={};
@@ -417,7 +418,8 @@ function renderYoYChart(){
   // Rough date labels per ISO week using a reference non-leap year (2023)
   const labels=[];const refYear=2023;for(let i=1;i<=52;i++){const d=new Date(refYear,0,1+(i-1)*7);labels.push(d.toLocaleDateString("en-US",{month:"short",day:"numeric"}))}
   const currentYear=new Date().getFullYear();
-  const palette=["#334155","#475569","#64748b","#94a3b8","#3b82f6","#8b5cf6","#ec4899","#f472b6","#f59e0b","#facc15","#84cc16","#10b981","#06b6d4","#0ea5e9","#6366f1","#a855f7","#d946ef","#f43f5e","#ef4444","#f97316","#eab308","#22c55e","#14b8a6","#0891b2","#2563eb","#7c3aed"];
+  // Vibrant, high-contrast palette (no greys) for distinct year lines
+  const palette=["#ef4444","#f97316","#fbbf24","#22c55e","#14b8a6","#3b82f6","#8b5cf6","#ec4899","#f43f5e","#84cc16","#06b6d4","#a855f7"];
   const ds=sortedYears.map((yr,i)=>{
     const isCurrent=yr===currentYear;
     const color=isCurrent?"#00e5ff":palette[i%palette.length];
