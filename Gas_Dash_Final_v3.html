@@ -7,7 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#080b10;--sf:#0e1219;--sf2:#141b24;--bd:rgba(255,255,255,0.06);--bd2:rgba(255,255,255,0.1);--tx:#c5cdd8;--tx2:#7b8a9d;--tx3:#3f4d5e;--cy:#00e5ff;--cy2:rgba(0,229,255,0.12);--am:#ffb300;--vi:#b388ff;--gn:#00e676;--rd:#ff5252;--rs:#f472b6;--tl:#2dd4bf;--mo:'JetBrains Mono',monospace;--sa:'Outfit',sans-serif}
+:root{--bg:#080b10;--sf:#0e1219;--sf2:#141b24;--bd:rgba(255,255,255,0.06);--bd2:rgba(255,255,255,0.1);--tx:#c5cdd8;--tx2:#9aa8bc;--tx3:#8a99ae;--cy:#00e5ff;--cy2:rgba(0,229,255,0.12);--am:#ffb300;--vi:#b388ff;--gn:#00e676;--rd:#ff5252;--rs:#f472b6;--tl:#2dd4bf;--mo:'JetBrains Mono',monospace;--sa:'Outfit',sans-serif}
 *{margin:0;padding:0;box-sizing:border-box}body{background:var(--bg);color:var(--tx);font-family:var(--sa);min-height:100vh}
 ::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.08);border-radius:3px}
 .header{background:linear-gradient(180deg,rgba(0,229,255,0.04) 0%,var(--bg) 100%);border-bottom:1px solid var(--bd);padding:20px 28px 16px}.header-top{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px}.header-badge{font-size:9px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--cy);font-family:var(--mo)}.header h1{font-size:28px;font-weight:800;color:#eaf0f6;margin:4px 0 0;letter-spacing:-.5px}.header-meta{font-size:12px;color:var(--tx2);margin-top:5px}.header-meta span{color:var(--tx3);margin-left:10px}
@@ -47,6 +47,8 @@
 <script>
 const AK="pMqnFqpdhwFV0XzZGK0G5ECuAqx1N4v68AxsRBkI";
 const PD=[{id:"NUS",label:"U.S. Total",short:"U.S."},{id:"R10",label:"PADD 1 (East Coast)",short:"PADD 1"},{id:"R20",label:"PADD 2 (Midwest)",short:"PADD 2"},{id:"R30",label:"PADD 3 (Gulf Coast)",short:"PADD 3"},{id:"R40",label:"PADD 4 (Rockies)",short:"PADD 4"},{id:"R50",label:"PADD 5 (West Coast)",short:"PADD 5"}];
+const SUB1=[{id:"R1A",label:"PADD 1A — New England",short:"1A · New England"},{id:"R1B",label:"PADD 1B — Central Atlantic",short:"1B · Central Atlantic"},{id:"R1C",label:"PADD 1C — Lower Atlantic",short:"1C · Lower Atlantic"}];
+const SUB1_IDS=SUB1.map(p=>p.id);
 const PI=PD.map(p=>p.id);
 const PM={
   RBOB:{color:"#00e5ff",label:"RBOB"},CBOB:{color:"#ffb300",label:"CBOB"},TGAS:{color:"#b388ff",label:"Total Gasoline"},
@@ -62,10 +64,10 @@ const TABS={
   stocks:{label:"Ending Stocks",unit:"Thousand Barrels",defaultPadd:"NUS"},
   trade:{label:"Trade",unit:"Thousand Bbl/Day",defaultPadd:"NUS"},
   production:{label:"Production",unit:"Thousand Bbl/Day",defaultPadd:"NUS"},
-  refinery:{label:"Refinery Runs",unit:"Thousand Bbl/Day",defaultPadd:"NUS"},
-  demand:{label:"Product Supplied",unit:"Thousand Bbl/Day",defaultPadd:"NUS"},
+  refinery:{label:"Refinery/Blender Inputs",unit:"Thousand Bbl/Day",defaultPadd:"NUS"},
+  demand:{label:"Product Supplied (Demand)",unit:"Thousand Bbl/Day",defaultPadd:"NUS"},
 };
-let tradeView="rbob_cbob",refineryView="gasoline",demandView="mogas";
+let tradeView="rbob_cbob",refineryView="gasoline",demandView="mogas",stocksChartType="historical";
 function getProducts(){
   if(activeTab==="stocks")return["RBOB","CBOB","TGAS"];
   if(activeTab==="trade"){if(tradeView==="rbob_cbob")return["RBOB_IMP","CBOB_IMP"];if(tradeView==="total_mogas")return["GAS_IMP","MOGAS_EXP"];if(tradeView==="crude")return["CRUDE_IMP_EXCL","CRUDE_EXP"];if(tradeView==="net")return["CRUDE_NET","PROD_NET"]}
@@ -79,7 +81,7 @@ let DATA={},fetchedCats={},activeTab="stocks",activePadd="NUS",totalCalls=0,okCa
 let dateRange="ALL",customStart=null,customEnd=null;
 
 /* ══════ API ══════ */
-async function apiFetch(url,retries=3){for(let a=0;a<=retries;a++){totalCalls++;updateStatus();try{const r=await fetch(url);if(r.status===429){totalCalls--;const w=Math.pow(2,a)*2000;logDebug("_retry","attempt "+(a+1),"","retry",0,null,null,"wait "+w+"ms");await new Promise(ok=>setTimeout(ok,w));continue}if(!r.ok){failCalls++;updateStatus();return{ok:false,data:[],error:"HTTP "+r.status}}const j=await r.json();okCalls++;updateStatus();return{ok:true,data:j.response?.data||[],error:null}}catch(e){failCalls++;updateStatus();return{ok:false,data:[],error:e.message}}}failCalls++;updateStatus();return{ok:false,data:[],error:"429 after retries"}}
+async function apiFetch(url,retries=3){for(let a=0;a<=retries;a++){totalCalls++;updateStatus();try{const r=await fetch(url);if(r.status===429){totalCalls--;const w=Math.pow(2,a)*2000;logDebug("_retry","attempt "+(a+1),"","retry",0,null,null,"wait "+w+"ms");await new Promise(ok=>setTimeout(ok,w));continue}if(r.status===403){failCalls++;updateStatus();return{ok:false,data:[],error:"INVALID_KEY"}}if(!r.ok){failCalls++;updateStatus();return{ok:false,data:[],error:"HTTP "+r.status}}const j=await r.json();if(j.error){failCalls++;updateStatus();return{ok:false,data:[],error:"INVALID_KEY"}}okCalls++;updateStatus();return{ok:true,data:j.response?.data||[],error:null}}catch(e){failCalls++;updateStatus();return{ok:false,data:[],error:e.message}}}failCalls++;updateStatus();return{ok:false,data:[],error:"429 after retries"}}
 function pv(v){if(v==null)return null;const n=parseFloat(v);return isNaN(n)?null:n}
 function store(cat,pk,area,arr){const key=cat+"_"+pk+"_"+area;DATA[key]=arr;logDebug(cat,key,"",arr.length>0?"ok":"empty",arr.length,arr.length?arr[0].period:null,arr.length?arr[arr.length-1].period:null,null)}
 function dedup(arr){const seen=new Set(),out=[];for(let i=arr.length-1;i>=0;i--){if(!seen.has(arr[i].period)){seen.add(arr[i].period);out.unshift(arr[i])}}return out}
@@ -88,11 +90,34 @@ function storeAll(cat,bk){Object.keys(bk).forEach(k=>{const[pk,area]=k.split("|"
 function areaBucket(raw){const bk={};raw.forEach(d=>{const area=d.duoarea;if(!area)return;if(!bk[area])bk[area]=[];const v=pv(d.value);if(v!==null)bk[area].push({period:d.period,value:v})});Object.keys(bk).forEach(k=>{bk[k].sort((a,b)=>a.period.localeCompare(b.period));bk[k]=dedup(bk[k])});return bk}
 
 /* ══════ FETCHERS ══════ */
+const STOCKS_MIN_DATE="2018-01-01";
 async function fetchStocks(){
   const url="https://api.eia.gov/v2/petroleum/sum/sndw/data/?api_key="+AK+"&frequency=weekly&data[0]=value&facets[series][]=WO6ST_NUS_1&facets[series][]=WO6ST_R10_1&facets[series][]=WO6ST_R20_1&facets[series][]=WO6ST_R30_1&facets[series][]=WO6ST_R40_1&facets[series][]=WO6ST_R50_1&facets[series][]=W_EPOBGRR_SAE_NUS_MBBL&facets[series][]=W_EPOBGRR_SAE_R10_MBBL&facets[series][]=W_EPOBGRR_SAE_R20_MBBL&facets[series][]=W_EPOBGRR_SAE_R30_MBBL&facets[series][]=W_EPOBGRR_SAE_R40_MBBL&facets[series][]=W_EPOBGRR_SAE_R50_MBBL&facets[series][]=WGTSTP11&facets[series][]=WGTSTP21&facets[series][]=WGTSTP31&facets[series][]=WGTSTP41&facets[series][]=WGTSTP51&facets[series][]=WGTSTUS1&facets[product][]=EPOBGRR&facets[product][]=EPOBGCC&facets[product][]=EPM0&facets[process][]=SAE&facets[duoarea][]=NUS&facets[duoarea][]=R10&facets[duoarea][]=R20&facets[duoarea][]=R30&facets[duoarea][]=R40&facets[duoarea][]=R50&sort[0][column]=period&sort[0][direction]=desc&offset=0&length=5000";
   const r=await apiFetch(url);if(!r.ok){logDebug("stocks","ALL","","fail",0,null,null,r.error);return}
   logDebug("stocks","BATCH","","ok",r.data.length,null,null,"raw");
-  storeAll("stocks",bucket(r.data,{"EPOBGRR":"RBOB","EPOBGCC":"CBOB","EPM0":"TGAS"},null));
+  // Hard floor at 2018 for ALL stocks data (US, PADDs 1-5)
+  const filtered=r.data.filter(d=>d.period&&d.period>=STOCKS_MIN_DATE);
+  storeAll("stocks",bucket(filtered,{"EPOBGRR":"RBOB","EPOBGCC":"CBOB","EPM0":"TGAS"},null));
+}
+
+async function fetchStocksPadd1Sub(){
+  const url="https://api.eia.gov/v2/petroleum/stoc/wstk/data/?api_key="+AK+"&frequency=weekly&data[0]=value&facets[duoarea][]=R1X&facets[duoarea][]=R1Y&facets[duoarea][]=R1Z&facets[process][]=SAE&facets[product][]=EPM0&facets[series][]=WGTST1A1&facets[series][]=WGTST1B1&facets[series][]=WGTST1C1&sort[0][column]=period&sort[0][direction]=desc&offset=0&length=5000";
+  const r=await apiFetch(url);if(!r.ok){logDebug("stocks","PADD1_SUB","","fail",0,null,null,r.error);return}
+  logDebug("stocks","PADD1_SUB_BATCH","","ok",r.data.length,null,null,"raw");
+  const seriesMap={"WGTST1A1":"R1A","WGTST1B1":"R1B","WGTST1C1":"R1C"};
+  const bk={};
+  r.data.forEach(d=>{
+    const area=seriesMap[d.series];
+    if(!area)return;
+    // Hard floor at 2018 for sub-PADD stocks too
+    if(!d.period||d.period<STOCKS_MIN_DATE)return;
+    const v=pv(d.value);if(v===null)return;
+    const k="TGAS|"+area;
+    if(!bk[k])bk[k]=[];
+    bk[k].push({period:d.period,value:v});
+  });
+  Object.keys(bk).forEach(k=>{bk[k].sort((a,b)=>a.period.localeCompare(b.period));bk[k]=dedup(bk[k])});
+  storeAll("stocks",bk);
 }
 
 async function fetchTrade(){
@@ -113,12 +138,12 @@ async function fetchTrade(){
 
 /* Crude imports per PADD (excl SPR) + US excl SPR + US incl SPR, then exports US only */
 async function fetchCrudeTrade(){
-  // IMPORTS
   const urlImp="https://api.eia.gov/v2/petroleum/move/wkly/data/?api_key="+AK+"&frequency=weekly&data[0]=value&facets[series][]=WCEIMP12&facets[series][]=WCEIMP22&facets[series][]=WCEIMP32&facets[series][]=WCEIMP42&facets[series][]=WCEIMP52&facets[series][]=WCEIMUS2&facets[series][]=WCRIMUS2&sort[0][column]=period&sort[0][direction]=desc&offset=0&length=5000";
-  const r1=await apiFetch(urlImp);
+  const urlExp="https://api.eia.gov/v2/petroleum/move/wkly/data/?api_key="+AK+"&frequency=weekly&data[0]=value&facets[series][]=WCREXUS2&sort[0][column]=period&sort[0][direction]=desc&offset=0&length=5000";
+  const[r1,r2]=await Promise.all([apiFetch(urlImp),apiFetch(urlExp)]);
+  // IMPORTS
   if(r1.ok&&r1.data.length){
     logDebug("trade","CRUDE_IMP","move/wkly","ok",r1.data.length,null,null,"raw");
-    // Map by series ID to distinguish excl/incl SPR for NUS
     const seriesMap={"WCEIMP12":"R10","WCEIMP22":"R20","WCEIMP32":"R30","WCEIMP42":"R40","WCEIMP52":"R50","WCEIMUS2":"NUS","WCRIMUS2":"NUS_INCL"};
     const bk={};
     r1.data.forEach(d=>{
@@ -138,15 +163,11 @@ async function fetchCrudeTrade(){
     Object.keys(bk).forEach(k=>{bk[k].sort((a,b)=>a.period.localeCompare(b.period));bk[k]=dedup(bk[k])});
     storeAll("trade",bk);
   } else {logDebug("trade","CRUDE_IMP","","fail",0,null,null,r1.error||"empty")}
-
-  // EXPORTS — US total only
-  const urlExp="https://api.eia.gov/v2/petroleum/move/wkly/data/?api_key="+AK+"&frequency=weekly&data[0]=value&facets[series][]=WCREXUS2&sort[0][column]=period&sort[0][direction]=desc&offset=0&length=5000";
-  const r2=await apiFetch(urlExp);
+  // EXPORTS — US total only (trim to imports range after both resolve)
   if(r2.ok&&r2.data.length){
     logDebug("trade","CRUDE_EXP","move/wkly","ok",r2.data.length,null,null,"raw");
     let arr=r2.data.map(d=>({period:d.period,value:pv(d.value)})).filter(d=>d.value!==null).reverse();
     arr=dedup(arr);
-    // Trim exports to start no earlier than imports (excl SPR) NUS
     const impNus=DATA["trade_CRUDE_IMP_EXCL_NUS"];
     if(impNus&&impNus.length){const startDate=impNus[0].period;arr=arr.filter(d=>d.period>=startDate)}
     store("trade","CRUDE_EXP","NUS",arr);
@@ -184,7 +205,7 @@ async function fetchUtil(){
   if(r1.ok){logDebug("refinery","UTIL_PADD","","ok",r1.data.length,null,null,"raw");const ab=areaBucket(r1.data);Object.keys(ab).forEach(area=>store("refinery","UTIL",area,ab[area]))}
   else{logDebug("refinery","UTIL_PADD","","fail",0,null,null,r1.error)}
   // U.S. Total utilization — dedicated call with user's exact series
-  const url2="https://api.eia.gov/v2/petroleum/pnp/wiup/data/?api_key="+AK+"&frequency=weekly&data[0]=value&facets[series][]=WPULEUS3&facets[duoarea][]=NUS&facets[process][]=YUP&facets[product][]=%28NA%29&sort[0][column]=period&sort[0][direction]=desc&offset=0&length=5000";
+  const url2="https://api.eia.gov/v2/petroleum/pnp/wiup/data/?api_key="+AK+"&frequency=weekly&data[0]=value&facets[series][]=WPULEUS3&sort[0][column]=period&sort[0][direction]=desc&offset=0&length=5000";
   const r2=await apiFetch(url2);
   if(r2.ok&&r2.data.length){
     logDebug("refinery","UTIL_NUS","","ok",r2.data.length,null,null,"raw");
@@ -208,11 +229,11 @@ async function fetchEthanol(){
 }
 
 async function fetchCategory(ck){if(fetchedCats[ck])return fetchedCats[ck];let p;switch(ck){
-  case"stocks":p=fetchStocks();break;
-  case"trade":p=(async()=>{await fetchTrade();await fetchCrudeTrade()})();break;
+  case"stocks":p=Promise.all([fetchStocks(),fetchStocksPadd1Sub()]);break;
+  case"trade":p=(async()=>{await Promise.all([fetchTrade(),fetchCrudeTrade()])})();break;
   case"production":p=fetchProduction();break;
-  case"refinery":p=(async()=>{await fetchRefineryGas();await fetchRefineryCrude();await fetchUtil()})();break;
-  case"demand":p=(async()=>{await fetchDemand();await fetchEthanol()})();break;
+  case"refinery":p=Promise.all([fetchRefineryGas(),fetchRefineryCrude(),fetchUtil()]);break;
+  case"demand":p=Promise.all([fetchDemand(),fetchEthanol()]);break;
 }fetchedCats[ck]=p;await p}
 
 /* ══════ 5-YEAR AVG CALCULATION ══════ */
@@ -234,10 +255,10 @@ function calc5YrAvg(series){
 }
 
 /* ══════ DATE ══════ */
-function getDateCutoff(){if(dateRange==="ALL")return null;if(dateRange==="CUSTOM")return customStart;const n=new Date();const m={"1M":1,"3M":3,"6M":6,"1Y":12,"2Y":24};n.setMonth(n.getMonth()-(m[dateRange]||0));return n.toISOString().slice(0,10)}
+function getDateCutoff(){if(dateRange==="ALL")return null;if(dateRange==="CUSTOM")return customStart;const n=new Date();const m={"1M":1,"3M":3,"6M":6,"1Y":12,"2Y":24,"5Y":60};n.setMonth(n.getMonth()-(m[dateRange]||0));return n.toISOString().slice(0,10)}
 function getDateEnd(){return dateRange==="CUSTOM"&&customEnd?customEnd:null}
-function filterByDate(arr){if(!arr||!arr.length)return arr;const s=getDateCutoff(),e=getDateEnd();return arr.filter(d=>{if(s&&d.period<s)return false;if(e&&d.period>e)return false;return true})}
-function setRange(r){dateRange=r;document.querySelectorAll('.range-btn').forEach(b=>b.classList.toggle('active',b.dataset.range===r));renderSection()}
+function filterByDate(arr){if(!arr||!arr.length)return arr;let s=getDateCutoff(),e=getDateEnd();if(activeTab==="stocks"&&(!s||s<"2018-01-01"))s="2018-01-01";return arr.filter(d=>{if(s&&d.period<s)return false;if(e&&d.period>e)return false;return true})}
+function setRange(r){dateRange=r;customStart=null;customEnd=null;const ds=document.getElementById('dateStart');if(ds)ds.value="";const de=document.getElementById('dateEnd');if(de)de.value="";document.querySelectorAll('.range-btn').forEach(b=>b.classList.toggle('active',b.dataset.range===r));renderSection()}
 function applyCustomDates(){const s=document.getElementById('dateStart')?.value,e=document.getElementById('dateEnd')?.value;if(s){customStart=s;customEnd=e||null;dateRange="CUSTOM";document.querySelectorAll('.range-btn').forEach(b=>b.classList.toggle('active',b.dataset.range==="CUSTOM"));renderSection()}}
 
 /* ══════ DEBUG ══════ */
@@ -307,16 +328,21 @@ function computeSentiment(){
 function setTradeView(v){tradeView=v;renderSection()}
 function setRefineryView(v){refineryView=v;renderSection()}
 function setDemandView(v){demandView=v;renderSection()}
+function setStocksChartType(v){stocksChartType=v;renderSection()}
 
 /* ══════ TABS ══════ */
 function buildTabs(){const bar=document.getElementById("tabBar");bar.innerHTML="";Object.entries(TABS).forEach(([k,v])=>{const b=document.createElement("button");b.className="tab-btn"+(k===activeTab?" active":"");b.textContent=v.label;b.onclick=()=>switchTab(k);bar.appendChild(b)})}
 async function switchTab(ck){activeTab=ck;activePadd=TABS[ck].defaultPadd;buildTabs();const c=document.getElementById("sectionContainer");c.innerHTML='<div class="chart-loading"><div class="spinner"></div> Loading '+TABS[ck].label.toLowerCase()+'...</div>';await fetchCategory(ck);renderSection();updateMetrics();computeSentiment();document.getElementById("lastUpdate").textContent="  Updated "+new Date().toLocaleTimeString();if(debugOpen)renderDebug()}
 
 /* ══════ RENDER ══════ */
+function getPaddLabel(id){return PD.find(p=>p.id===id)?.label||SUB1.find(p=>p.id===id)?.label||id}
+function isSub1(id){return SUB1_IDS.indexOf(id)>=0}
 function renderSection(){
   const cfg=TABS[activeTab];const products=getProducts();
   const isDemandMogas=activeTab==="demand"&&demandView==="mogas";
   const showPadds=!isDemandMogas;
+  const isStocks=activeTab==="stocks";
+  const inPadd1Area=isStocks&&(activePadd==="R10"||isSub1(activePadd));
   let ap;if(!showPadds)ap=[PD[0]];
   else{ap=PD.filter(p=>products.some(pk=>(DATA[activeTab+"_"+pk+"_"+p.id]||[]).length>0));if(!ap.length)ap=PD}
   const c=document.getElementById("sectionContainer");
@@ -326,23 +352,32 @@ function renderSection(){
   if(activeTab==="demand"){h+=' <select class="view-select" onchange="setDemandView(this.value)"><option value="mogas"'+(demandView==="mogas"?' selected':'')+'>Finished Motor Gasoline</option><option value="ethanol"'+(demandView==="ethanol"?' selected':'')+'>Fuel Ethanol Inputs</option></select>'}
   h+='</div>';
   if(showPadds){h+='<div class="padd-bar">';ap.forEach(p=>{h+='<button class="padd-btn'+(p.id===activePadd?' active':'')+'" onclick="selectPadd(\''+p.id+'\')">'+p.short+'</button>'});h+='</div>'}
+  if(inPadd1Area){h+='<div class="padd-bar" style="margin-top:-6px"><span style="font-size:10px;color:var(--tx3);font-family:var(--mo);text-transform:uppercase;letter-spacing:1px;padding:4px 6px 4px 0;align-self:center">PADD 1 Sub-Regions:</span>';SUB1.forEach(p=>{h+='<button class="padd-btn'+(p.id===activePadd?' active':'')+'" onclick="selectPadd(\''+p.id+'\')">'+p.short+'</button>'});h+='</div>'}
   h+='<div class="date-controls"><span class="date-label">Range:</span>';
-  ["1M","3M","6M","1Y","2Y","ALL"].forEach(r=>{h+='<button class="range-btn'+(dateRange===r?' active':'')+'" data-range="'+r+'" onclick="setRange(\''+r+'\')">'+r+'</button>'});
-  h+='<span class="date-sep">|</span><span class="date-label">Custom:</span><input type="date" class="date-input" id="dateStart" value="'+(customStart||"")+'" onchange="applyCustomDates()"><span class="date-sep">→</span><input type="date" class="date-input" id="dateEnd" value="'+(customEnd||"")+'" onchange="applyCustomDates()"></div>';
-  const pl=PD.find(p=>p.id===activePadd)?.label||activePadd;
-  h+='<div class="chart-box"><div class="chart-title">'+cfg.label+' — '+pl+'</div><div class="chart-wrap"><canvas id="chartMain"></canvas></div><div class="chart-unit">'+cfg.unit+'</div></div>';
+  ["1M","3M","6M","1Y","2Y","5Y","ALL"].forEach(r=>{h+='<button class="range-btn'+(dateRange===r?' active':'')+'" data-range="'+r+'" onclick="setRange(\''+r+'\')">'+r+'</button>'});
+  h+='<span class="date-sep">|</span><span class="date-label">Custom:</span><input type="date" class="date-input" id="dateStart" value="'+(customStart||"")+'" onchange="applyCustomDates()"><span class="date-sep">→</span><input type="date" class="date-input" id="dateEnd" value="'+(customEnd||"")+'" onchange="applyCustomDates()">';
+  if(isStocks){h+='<span class="date-sep">|</span><span class="date-label">Chart Type:</span><select class="view-select" style="padding:3px 8px;font-size:11px" onchange="setStocksChartType(this.value)"><option value="historical"'+(stocksChartType==="historical"?' selected':'')+'>Historical</option><option value="yoy"'+(stocksChartType==="yoy"?' selected':'')+'>YoY</option></select>'}
+  h+='</div>';
+  const pl=getPaddLabel(activePadd);
+  if(isStocks&&stocksChartType==="yoy"){
+    h+='<div class="chart-box"><div class="chart-title">Year-over-Year Seasonal — '+pl+' <span style="font-size:10px;color:var(--tx3);margin-left:6px;font-weight:400">(all available years)</span></div><div class="chart-wrap"><canvas id="chartYoY"></canvas></div><div class="chart-unit">Thousand Barrels</div></div>';
+  } else {
+    h+='<div class="chart-box"><div class="chart-title">'+cfg.label+' — '+pl+(isStocks?' <span style="font-size:10px;color:var(--tx3);margin-left:6px;font-weight:400">(from 2018)</span>':'')+'</div><div class="chart-wrap"><canvas id="chartMain"></canvas></div><div class="chart-unit">'+cfg.unit+'</div></div>';
+  }
   if(activeTab==="refinery"){h+='<div class="chart-box"><div class="chart-title">Refinery Utilization % — '+pl+'</div><div class="chart-wrap short"><canvas id="chartUtil"></canvas></div><div class="chart-unit">Percent</div></div>'}
 
   // Tables with 5yr avg or 4wk avg
   products.forEach(pk=>{
     const m=PM[pk];if(!m)return;
+    // For stocks + TGAS, include PADD 1 sub-regions in the table
+    const tableRegions=(isStocks&&pk==="TGAS"&&showPadds)?[...ap,...SUB1]:(showPadds?ap:[PD[0]]);
     h+='<div class="product-label"><span class="product-dot" style="background:'+m.color+'"></span>'+m.label+(showPadds?' — All PADDs':'')+'</div><div class="table-wrap"><table><thead><tr>';
     // Determine if any PADD has enough data for 5yr avg
-    const anyHas5yr=(showPadds?ap:[PD[0]]).some(p=>{const s=DATA[activeTab+"_"+pk+"_"+p.id]||[];return s.length>=260});
+    const anyHas5yr=tableRegions.some(p=>{const s=DATA[activeTab+"_"+pk+"_"+p.id]||[];return s.length>=260});
     const avgLabel=anyHas5yr?"5-Yr Avg":"4-Wk Avg";
     ["Region","Latest","Prior Wk","WoW Chg",avgLabel,"Yr Ago","YoY Chg"].forEach(x=>h+='<th>'+x+'</th>');
     h+='</tr></thead><tbody>';
-    (showPadds?ap:[PD[0]]).forEach(p=>{
+    tableRegions.forEach(p=>{
       const s=DATA[activeTab+"_"+pk+"_"+p.id]||[];
       if(!s.length){h+='<tr><td>'+p.label+'</td><td colspan="6" class="muted">No data</td></tr>';return}
       const lat=s[s.length-1]?.value,pri=s.length>=2?s[s.length-2]?.value:null,wk=lat!=null&&pri!=null?lat-pri:null;
@@ -358,13 +393,57 @@ function renderSection(){
     });h+='</tbody></table></div>';
   });
   h+='</div>';c.innerHTML=h;
-  renderMainChart();if(activeTab==="refinery")renderUtilChart();
+  if(isStocks&&stocksChartType==="yoy"){renderYoYChart()}else{renderMainChart()}
+  if(activeTab==="refinery")renderUtilChart();
 }
 function selectPadd(pid){activePadd=pid;renderSection()}
 
 /* ══════ CHARTS ══════ */
-function chartOpts(isPct){return{responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},plugins:{legend:{labels:{color:"#7b8a9d",font:{family:"Outfit",size:11}}},tooltip:{backgroundColor:"#141b24",borderColor:"rgba(255,255,255,0.1)",borderWidth:1,titleFont:{family:"JetBrains Mono",size:11},bodyFont:{family:"JetBrains Mono",size:11},titleColor:"#c5cdd8",bodyColor:"#c5cdd8",callbacks:{title:ctx=>{const d=new Date(ctx[0].label+"T00:00:00");return d.toLocaleDateString("en-US",{year:"numeric",month:"short",day:"numeric"})},label:ctx=>ctx.dataset.label+": "+fF(ctx.parsed.y)+(isPct?"%":"")}}},scales:{x:{grid:{color:"rgba(255,255,255,0.03)"},ticks:{color:"#3f4d5e",font:{family:"JetBrains Mono",size:10},maxTicksLimit:12,callback:function(val){const l=this.getLabelForValue(val);const d=new Date(l+"T00:00:00");return d.toLocaleDateString("en-US",{month:"short",year:"2-digit"})}}},y:{grid:{color:"rgba(255,255,255,0.03)"},ticks:{color:"#3f4d5e",font:{family:"JetBrains Mono",size:10},callback:v=>fS(v)+(isPct?"%":"")}}}}}
+function chartOpts(isPct){return{responsive:true,maintainAspectRatio:false,interaction:{mode:"index",intersect:false},plugins:{legend:{labels:{color:"#bac6d6",font:{family:"Outfit",size:11}}},tooltip:{backgroundColor:"#141b24",borderColor:"rgba(255,255,255,0.1)",borderWidth:1,titleFont:{family:"JetBrains Mono",size:11},bodyFont:{family:"JetBrains Mono",size:11},titleColor:"#eaf0f6",bodyColor:"#eaf0f6",callbacks:{title:ctx=>{const d=new Date(ctx[0].label+"T00:00:00");return d.toLocaleDateString("en-US",{year:"numeric",month:"short",day:"numeric"})},label:ctx=>ctx.dataset.label+": "+fF(ctx.parsed.y)+(isPct?"%":"")}}},scales:{x:{grid:{color:"rgba(255,255,255,0.03)"},ticks:{color:"#bac6d6",font:{family:"JetBrains Mono",size:10},maxTicksLimit:12,callback:function(val){const l=this.getLabelForValue(val);const d=new Date(l+"T00:00:00");return d.toLocaleDateString("en-US",{month:"short",year:"2-digit"})}}},y:{grid:{color:"rgba(255,255,255,0.03)"},ticks:{color:"#bac6d6",font:{family:"JetBrains Mono",size:10},callback:v=>fS(v)+(isPct?"%":"")}}}}}
 function renderMainChart(){const canvas=document.getElementById("chartMain");if(!canvas)return;if(charts.main){charts.main.destroy();charts.main=null}const products=getProducts();const pSet=new Set(),sMap={};products.forEach(pk=>{const raw=DATA[activeTab+"_"+pk+"_"+activePadd]||[];const data=filterByDate(raw);const map={};data.forEach(d=>{pSet.add(d.period);map[d.period]=d.value});sMap[pk]=map});const labels=[...pSet].sort();if(!labels.length){canvas.parentElement.innerHTML='<div class="no-data">No data for this selection.</div>';return}const ds=[];products.forEach(pk=>{const m=PM[pk];if(!m)return;const map=sMap[pk]||{};if(!labels.some(p=>map[p]!=null))return;ds.push({label:m.label,data:labels.map(p=>map[p]!=null?map[p]:null),borderColor:m.color,backgroundColor:m.color+"18",fill:true,tension:.3,pointRadius:0,pointHitRadius:8,borderWidth:2,spanGaps:true})});if(!ds.length){canvas.parentElement.innerHTML='<div class="no-data">No data for this selection.</div>';return}charts.main=new Chart(canvas,{type:"line",data:{labels,datasets:ds},options:chartOpts(false)})}
+function renderYoYChart(){
+  const canvas=document.getElementById("chartYoY");if(!canvas)return;
+  if(charts.yoy){charts.yoy.destroy();charts.yoy=null}
+  // For YoY, prefer TGAS (total gasoline) since it has the deepest history
+  const pk=isSub1(activePadd)?"TGAS":"TGAS";
+  const raw=DATA["stocks_"+pk+"_"+activePadd]||[];
+  if(!raw.length){canvas.parentElement.innerHTML='<div class="no-data">No YoY data for this selection.</div>';return}
+  // Group by year; use ISO week as x-axis key. Floor at 2018.
+  const years={};
+  raw.forEach(d=>{
+    const yr=parseInt(d.period.slice(0,4));
+    if(yr<2018)return;
+    const wk=getISOWeek(d.period);
+    if(wk<1||wk>53)return;
+    if(!years[yr])years[yr]={};
+    if(years[yr][wk]==null)years[yr][wk]=d.value;
+  });
+  const sortedYears=Object.keys(years).map(Number).sort((a,b)=>a-b);
+  if(!sortedYears.length){canvas.parentElement.innerHTML='<div class="no-data">No YoY data for this selection.</div>';return}
+  // Rough date labels per ISO week using a reference non-leap year (2023)
+  const labels=[];const refYear=2023;for(let i=1;i<=52;i++){const d=new Date(refYear,0,1+(i-1)*7);labels.push(d.toLocaleDateString("en-US",{month:"short",day:"numeric"}))}
+  const currentYear=new Date().getFullYear();
+  // Vibrant, high-contrast palette (no greys) for distinct year lines
+  const palette=["#ef4444","#f97316","#fbbf24","#22c55e","#14b8a6","#3b82f6","#8b5cf6","#ec4899","#f43f5e","#84cc16","#06b6d4","#a855f7"];
+  const ds=sortedYears.map((yr,i)=>{
+    const isCurrent=yr===currentYear;
+    const color=isCurrent?"#00e5ff":palette[i%palette.length];
+    return{
+      label:String(yr),
+      data:labels.map((_,idx)=>years[yr][idx+1]!=null?years[yr][idx+1]:null),
+      borderColor:color,
+      backgroundColor:color+"18",
+      fill:false,
+      tension:.25,
+      pointRadius:0,
+      pointHitRadius:6,
+      borderWidth:isCurrent?3:1.3,
+      spanGaps:true
+    };
+  });
+  const baseOpts=chartOpts(false);
+  charts.yoy=new Chart(canvas,{type:"line",data:{labels,datasets:ds},options:{...baseOpts,plugins:{...baseOpts.plugins,legend:{labels:{color:"#bac6d6",font:{family:"Outfit",size:10},boxWidth:10,boxHeight:2,padding:6}},tooltip:{...baseOpts.plugins.tooltip,callbacks:{title:ctx=>ctx[0].label,label:ctx=>ctx.dataset.label+": "+fF(ctx.parsed.y)}}},scales:{x:{...baseOpts.scales.x,ticks:{color:"#bac6d6",font:{family:"JetBrains Mono",size:10},maxTicksLimit:13}},y:baseOpts.scales.y}}});
+}
 function renderUtilChart(){
   requestAnimationFrame(()=>{
     const canvas=document.getElementById("chartUtil");
@@ -408,8 +487,8 @@ function renderUtilChart(){
           // Draw average line as annotation
         },
         scales:{
-          x:{grid:{color:"rgba(255,255,255,0.03)"},ticks:{color:"#3f4d5e",font:{family:"JetBrains Mono",size:10},maxTicksLimit:12,callback:function(val){const l=this.getLabelForValue(val);const d=new Date(l+"T00:00:00");return d.toLocaleDateString("en-US",{month:"short",year:"2-digit"})}}},
-          y:{grid:{color:"rgba(255,255,255,0.03)"},min:0,max:100,ticks:{color:"#3f4d5e",font:{family:"JetBrains Mono",size:10},stepSize:10,callback:v=>v+"%"}}
+          x:{grid:{color:"rgba(255,255,255,0.03)"},ticks:{color:"#bac6d6",font:{family:"JetBrains Mono",size:10},maxTicksLimit:12,callback:function(val){const l=this.getLabelForValue(val);const d=new Date(l+"T00:00:00");return d.toLocaleDateString("en-US",{month:"short",year:"2-digit"})}}},
+          y:{grid:{color:"rgba(255,255,255,0.03)"},min:0,max:100,ticks:{color:"#bac6d6",font:{family:"JetBrains Mono",size:10},stepSize:10,callback:v=>v+"%"}}
         }
       },
       plugins:[{
@@ -440,8 +519,8 @@ function renderUtilChart(){
 }
 
 /* ══════ REFRESH/INIT ══════ */
-function refreshAll(){DATA={};fetchedCats={};totalCalls=0;okCalls=0;failCalls=0;debugLog=[];Object.values(charts).forEach(c=>{if(c)c.destroy()});charts={};updateStatus();switchTab(activeTab)}
-async function init(){buildTabs();document.getElementById("sectionContainer").innerHTML='<div class="chart-loading"><div class="spinner"></div> Loading all data from EIA...</div>';await fetchCategory("stocks");await fetchCategory("trade");await fetchCategory("production");await fetchCategory("refinery");await fetchCategory("demand");updateMetrics();computeSentiment();renderSection();document.getElementById("lastUpdate").textContent="  Updated "+new Date().toLocaleTimeString()}
+function refreshAll(){DATA={};fetchedCats={};totalCalls=0;okCalls=0;failCalls=0;debugLog=[];Object.values(charts).forEach(c=>{if(c)c.destroy()});charts={};updateStatus();init()}
+async function init(){buildTabs();document.getElementById("sectionContainer").innerHTML='<div class="chart-loading"><div class="spinner"></div> Loading all data from EIA...</div>';await Promise.all([fetchCategory("stocks"),fetchCategory("trade"),fetchCategory("production"),fetchCategory("refinery"),fetchCategory("demand")]);updateMetrics();computeSentiment();renderSection();document.getElementById("lastUpdate").textContent="  Updated "+new Date().toLocaleTimeString()}
 init();
 </script>
 </body>
